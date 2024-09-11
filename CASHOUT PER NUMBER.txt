@@ -1,0 +1,28 @@
+SELECT to_char(mti.transfer_date,'DD-MON-YYYY') "DAY",MTI.ACCOUNT_ID UNIQ_subs,
+sum(DECODE 
+    (mti2.entry_type,'CR', mti2.transfer_value / 100,-mti2.transfer_value / 100))
+ revenue
+FROM ecokash.sys_service_types sst,
+ecokash.mtx_transaction_items mti,
+ecokash.mtx_transaction_items mti2,
+ecokash.mtx_transaction_header mth
+WHERE mti.transfer_status = 'TS'
+AND mti.transfer_id=mti2.transfer_id
+AND mti.service_type = sst.service_type
+and mth.transfer_id=mti.transfer_id
+and mti2.wallet_number = '101IND03'
+and mti.user_type='PAYER'
+and mti.category_code='SUBS'
+and mti.transaction_type = 'MP'
+AND (
+     mth.SERVICE_TYPE IN ('CASHOUT','COFORUNREG','COUTBYCODE')
+     OR (
+         mth.SERVICE_TYPE IN ('ROLLBACK','TXNCORRECT')
+         and exists (select d.TRANSFER_ID from ecokash.MTX_TRANSACTION_ITEMS d where d.TRANSFER_ID = mth.ATTR_2_VALUE and d.SERVICE_TYPE IN ('CASHOUT','COFORUNREG','COUTBYCODE'))
+    )
+)
+AND mti.transfer_date >= to_date('01/11/2022','dd/mm/yyyy')
+and mti.transfer_date < last_day(to_date('31/12/2022','dd/mm/yyyy')) + 1
+--AND mti.transfer_value / 100 between 100 and 999
+GROUP BY to_char(mti.transfer_date,'DD-MON-YYYY'),MTI.ACCOUNT_ID
+;
